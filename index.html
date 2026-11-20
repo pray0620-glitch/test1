@@ -1,0 +1,528 @@
+<!-- design: beginner-homepage-helper / theme: 바다 파랑 -->
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>수영이의 운석파괴 게임</title>
+<style>
+  :root {
+    --main: #1F6FB2;
+    --main-dark: #16507F;
+    --accent: #F28C38;
+    --bg: #F3F7FC;
+    --card: #FFFFFF;
+    --text: #1F2933;
+    --muted: #5B6675;
+    --meteor-large: #69b7ff;
+    --meteor-medium: #ffe451;
+    --meteor-small: #ff6464;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 18px/1.7 "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
+    overflow-wrap: anywhere;
+  }
+  h1, h2, p { margin: 0; }
+  h1 { font-size: clamp(2rem, 7vw, 3.2rem); font-weight: 800; line-height: 1.2; }
+  h2 { font-size: 1.25rem; line-height: 1.3; }
+  .wrap { width: min(960px, calc(100% - 40px)); margin-inline: auto; }
+
+  .hero {
+    position: relative;
+    padding: 44px 0 72px;
+    text-align: center;
+    color: var(--card);
+    background: linear-gradient(135deg, var(--main), var(--main-dark));
+  }
+  .hero-icon { display: block; font-size: 52px; line-height: 1; margin-bottom: 16px; }
+  .hero p { margin: 12px auto 20px; max-width: 680px; }
+  .wave { position: absolute; bottom: -1px; left: 0; width: 100%; height: 34px; fill: var(--bg); }
+
+  .button, button {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 52px;
+    padding: 8px 22px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--main);
+    color: var(--card);
+    font: inherit;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform .18s ease, background-color .18s ease;
+  }
+  .button:hover, button:hover { background: var(--main-dark); transform: translateY(-2px); }
+  .hero .button { background: var(--accent); color: var(--text); }
+  :focus-visible { outline: 3px solid var(--main); outline-offset: 3px; }
+  .hero :focus-visible, .end :focus-visible { outline-color: var(--card); }
+
+  .game-section { padding-block: 24px 56px; }
+  .card {
+    padding: 24px;
+    border-radius: 20px;
+    background: var(--card);
+    box-shadow: 0 8px 24px rgba(0,0,0,.08);
+    animation: appear .35s ease-out both;
+  }
+  .status {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    text-align: center;
+  }
+  .status + .status { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 8px; }
+  .status > span {
+    min-width: 0;
+    padding: 8px 4px;
+    border-radius: 12px;
+    background: var(--bg);
+    font-size: 14px;
+  }
+  .status strong { display: block; color: var(--main-dark); font-size: 20px; }
+  .status + .status strong { display: inline; font-size: inherit; }
+  #lives { letter-spacing: 1px; }
+  #stage { color: var(--main-dark); font-weight: 800; }
+
+  .layout { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 24px; }
+  .game-column { min-width: 0; }
+  .field {
+    position: relative;
+    overflow: hidden;
+    margin-top: 12px;
+    border-radius: 20px;
+    background: color-mix(in srgb, var(--main-dark) 38%, var(--text));
+  }
+  canvas { display: block; width: 100%; height: auto; }
+  .end {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    align-content: safe center;
+    justify-items: center;
+    gap: 8px;
+    overflow: auto;
+    padding: 12px;
+    text-align: center;
+    color: var(--card);
+    background: color-mix(in srgb, var(--text) 88%, transparent);
+  }
+  .end[hidden] { display: none; }
+  .end h2 { font-size: clamp(18px, 4.5vw, 24px); }
+  .end p { font-size: 14px; line-height: 1.5; }
+  .player-name { display: grid; gap: 2px; text-align: left; font-size: 14px; }
+  input {
+    width: min(180px, 100%);
+    min-height: 48px;
+    padding: 6px 12px;
+    border: 1px solid var(--muted);
+    border-radius: 12px;
+    background: var(--card);
+    color: var(--text);
+    font: inherit;
+    font-size: 18px;
+  }
+
+  .sidebar { display: grid; align-content: start; gap: 24px; }
+  .help { margin-top: 12px; color: var(--muted); }
+  .points { display: grid; gap: 10px; margin: 16px 0; padding: 0; list-style: none; }
+  .points li { display: flex; align-items: center; gap: 10px; }
+  .points strong { margin-left: auto; }
+  .dot { width: 16px; aspect-ratio: 1; border-radius: 50%; background: var(--meteor-large); }
+  .medium .dot { background: var(--meteor-medium); }
+  .small .dot { background: var(--meteor-small); }
+  .ranking ol { margin: 12px 0 0; padding-left: 28px; }
+  .ranking ol:empty { display: none; }
+  .ranking li { padding-block: 6px; }
+  .ranking li::marker { color: var(--main-dark); font-weight: 800; }
+  footer { padding: 20px; background: var(--card); color: var(--muted); font-size: 14px; text-align: center; }
+
+  @keyframes appear {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @media (max-width: 720px) {
+    .layout { grid-template-columns: minmax(0, 1fr); gap: 56px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    .button:hover, button:hover { transform: none; }
+  }
+</style>
+<header class="hero">
+  <div class="wrap">
+    <span class="hero-icon" aria-hidden="true">🚀</span>
+    <h1>수영이의 운석파괴 게임</h1>
+    <p>60초 운석 파괴 챌린지</p>
+    <a class="button" href="#play">게임 시작 화면 보기</a>
+  </div>
+  <svg class="wave" viewBox="0 0 960 36" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M0 13C180 54 311 2 494 10S768 52 960 5V36H0Z"/>
+  </svg>
+</header>
+<main class="game-section">
+  <div class="wrap layout">
+    <div class="game-column">
+      <div class="status">
+        <span>점수 <strong id="score">0</strong></span>
+        <span>최고점수 <strong id="best">0</strong></span>
+        <span>남은 목숨 <strong id="lives" aria-label="3개">♥♥♥</strong></span>
+      </div>
+      <div class="status">
+        <span id="stage">적응 단계</span>
+        <span>남은 시간 <strong id="time">60</strong>초</span>
+      </div>
+      <div class="field" id="play" tabindex="-1">
+        <canvas id="game" width="400" height="450" aria-label="운석 슈팅 게임 화면"></canvas>
+        <form class="end" id="intro">
+          <h2>60초 운석 파괴 챌린지</h2>
+          <p>← → 좌우 이동 · ↑ ↓ 상하 이동<br>
+            스페이스바 레이저 발사<br>
+            운석을 맞히면 점수 획득 · 목숨 3개<br>
+            놓친 운석이 화면 아래로 나가면 목숨 −1<br>
+            10초마다 난이도가 올라갑니다</p>
+          <label class="player-name">별명 <input id="player-name" maxlength="16" placeholder="플레이어" autocomplete="nickname"></label>
+          <button type="submit">시작</button>
+        </form>
+        <section class="end" id="end" hidden>
+          <h2 id="result">게임 끝!</h2>
+          <p>최종 점수 <strong id="final-score">0</strong></p>
+          <button id="restart" type="button">다시 시작</button>
+          <button id="rename" type="button">이름 바꾸기</button>
+        </section>
+      </div>
+    </div>
+    <aside class="sidebar">
+      <section class="card" aria-labelledby="help-title">
+        <h2 id="help-title">🎮 조작법과 점수</h2>
+        <p class="help">← → ↑ ↓ 이동<br>스페이스바 레이저 발사</p>
+        <ul class="points">
+          <li class="large"><span class="dot" aria-hidden="true"></span> 큰 운석 <strong>1점</strong></li>
+          <li class="medium"><span class="dot" aria-hidden="true"></span> 중간 운석 <strong>2점</strong></li>
+          <li class="small"><span class="dot" aria-hidden="true"></span> 작은 운석 <strong>3점</strong></li>
+        </ul>
+        <p class="help">화면 아래로 놓친 운석 하나당 목숨 −1</p>
+      </section>
+      <section class="ranking card" aria-labelledby="ranking-title">
+        <h2 id="ranking-title">🏆 상위 5위 기록</h2>
+        <ol id="ranking"></ol>
+        <p id="empty-ranking" class="help">아직 기록이 없습니다.</p>
+      </section>
+    </aside>
+  </div>
+</main>
+<footer>교육용 예시 페이지</footer>
+<script>
+  const canvas = document.querySelector('#game');
+  const ctx = canvas.getContext('2d');
+  const scoreText = document.querySelector('#score');
+  const bestText = document.querySelector('#best');
+  const livesText = document.querySelector('#lives');
+  const timeText = document.querySelector('#time');
+  const stageText = document.querySelector('#stage');
+  const intro = document.querySelector('#intro');
+  const nameInput = document.querySelector('#player-name');
+  const end = document.querySelector('#end');
+  const resultText = document.querySelector('#result');
+  const finalScore = document.querySelector('#final-score');
+  const restart = document.querySelector('#restart');
+  const rename = document.querySelector('#rename');
+  const rankingList = document.querySelector('#ranking');
+  const emptyRanking = document.querySelector('#empty-ranking');
+  const { width, height } = canvas;
+  const bestKey = 'sooyoung-meteor-best-score';
+  const rankingKey = 'sooyoung-meteor-ranking';
+  let best = 0;
+  let ranking = [];
+  // 브라우저에 저장된 최고점수를 읽습니다.
+  try {
+    best = Number(localStorage.getItem(bestKey)) || 0;
+  } catch {
+    // 파일의 저장소 접근이 차단된 브라우저에서도 게임은 실행합니다.
+  }
+  try {
+    const saved = JSON.parse(localStorage.getItem(rankingKey));
+    if (Array.isArray(saved)) {
+      ranking = saved.filter((entry) => typeof entry?.name === 'string' &&
+        Number.isInteger(entry.score) && entry.score >= 0).slice(0, 5);
+    }
+  } catch {
+    // 순위표를 읽을 수 없으면 빈 순위표로 시작합니다.
+  }
+  const controls = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'];
+  const rockOutline = [1, 0.81, 0.96, 0.9, 1, 0.76, 0.92, 0.84, 1];
+  const meteorTypes = [
+    { radius: 23, speed: 140, points: 1, color: '#69b7ff', shadow: '#255aa7' },
+    { radius: 17, speed: 190, points: 2, color: '#ffe451', shadow: '#ab7510' },
+    { radius: 11, speed: 240, points: 3, color: '#ff6464', shadow: '#a32838' }
+  ];
+  const challengeTime = 60;
+  const stages = [
+    { label: '1단계 · 적응', interval: 2.2, speed: 0.45, turn: 1.1 },
+    { label: '2단계 · 가속', interval: 1.65, speed: 0.66, turn: 1.6 },
+    { label: '3단계 · 고속', interval: 1.25, speed: 0.87, turn: 2.2 },
+    { label: '4단계 · 급회전', interval: 0.95, speed: 1.08, turn: 2.9 },
+    { label: '5단계 · 운석 폭주', interval: 0.72, speed: 1.29, turn: 3.7 },
+    { label: '6단계 · 최종 공세', interval: 0.52, speed: 1.50, turn: 4.6 }
+  ];
+  const keys = new Set();
+  const stars = Array.from({ length: 65 }, () => ({
+    x: Math.random() * width,
+    y: Math.random() * height
+  }));
+  let ship, bullets, meteors, score, lives, spawnIn, shootIn, previousTime, elapsed, playerName;
+
+  window.addEventListener('keydown', (event) => {
+    if (intro.hidden && end.hidden && controls.includes(event.code)) {
+      event.preventDefault();
+      keys.add(event.code);
+    }
+  });
+  window.addEventListener('keyup', (event) => keys.delete(event.code));
+  window.addEventListener('blur', () => keys.clear());
+  intro.addEventListener('submit', (event) => {
+    event.preventDefault();
+    start();
+  });
+  restart.addEventListener('click', start);
+  rename.addEventListener('click', () => {
+    end.hidden = true;
+    intro.hidden = false;
+    reset();
+    nameInput.focus();
+  });
+
+  function start() {
+    playerName = nameInput.value.trim() || '플레이어';
+    intro.hidden = true;
+    end.hidden = true;
+    reset();
+    requestAnimationFrame(frame);
+  }
+
+  function reset() {
+    ship = { x: width / 2, y: height - 36 };
+    bullets = [];
+    meteors = [];
+    keys.clear();
+    score = 0;
+    lives = 3;
+    spawnIn = 0.8;
+    shootIn = 0;
+    elapsed = 0;
+    previousTime = undefined;
+    showStatus();
+    draw();
+  }
+
+  function showStatus() {
+    scoreText.textContent = score;
+    bestText.textContent = best;
+    livesText.textContent = '♥'.repeat(lives) + '♡'.repeat(3 - lives);
+    livesText.setAttribute('aria-label', lives + '개');
+    timeText.textContent = Math.ceil(challengeTime - elapsed);
+    stageText.textContent = currentStage().label;
+  }
+
+  function currentStage() {
+    return stages[Math.min(Math.floor(elapsed / 10), stages.length - 1)];
+  }
+
+  function showRanking() {
+    rankingList.replaceChildren();
+    emptyRanking.hidden = ranking.length > 0;
+    for (const entry of ranking) {
+      const row = document.createElement('li');
+      row.textContent = entry.name + ' · ' + entry.score + '점';
+      rankingList.append(row);
+    }
+  }
+
+  function saveResult() {
+    ranking.push({ name: playerName, score });
+    ranking.sort((a, b) => b.score - a.score);
+    ranking = ranking.slice(0, 5);
+    try {
+      localStorage.setItem(rankingKey, JSON.stringify(ranking));
+    } catch {
+      // 저장소에 접근할 수 없으면 현재 화면에 순위표를 유지합니다.
+    }
+    showRanking();
+  }
+
+  // 두 물체의 중심 사이 거리가 반지름의 합보다 짧으면 충돌입니다.
+  function touches(a, b) {
+    return Math.hypot(a.x - b.x, a.y - b.y) <= a.radius + b.radius;
+  }
+
+  function update(dt) {
+    const previousStage = currentStage();
+    elapsed = Math.min(elapsed + dt, challengeTime);
+    const stage = currentStage();
+    if (stage !== previousStage) spawnIn = Math.min(spawnIn, 0.2);
+    const dx = Number(keys.has('ArrowRight')) - Number(keys.has('ArrowLeft'));
+    const dy = Number(keys.has('ArrowDown')) - Number(keys.has('ArrowUp'));
+    const speed = 250 * dt / (Math.hypot(dx, dy) || 1);
+    ship.x = Math.max(14, Math.min(width - 14, ship.x + dx * speed));
+    ship.y = Math.max(14, Math.min(height - 14, ship.y + dy * speed));
+
+    // 스페이스바를 누르고 있으면 0.24초마다 레이저를 발사합니다.
+    shootIn -= dt;
+    if (keys.has('Space') && shootIn <= 0) {
+      bullets.push({ x: ship.x, y: ship.y - 16, radius: 4 });
+      shootIn = 0.24;
+    }
+    for (const bullet of bullets) bullet.y -= 470 * dt;
+    bullets = bullets.filter((bullet) => bullet.y >= -8);
+
+    spawnIn -= dt;
+    if (spawnIn <= 0 && elapsed < challengeTime) {
+      const type = meteorTypes[Math.floor(Math.random() * meteorTypes.length)];
+      meteors.push({
+        ...type,
+        y: -type.radius,
+        phase: Math.random() * Math.PI * 2,
+        turnSpeed: (0.8 + Math.random() * 0.4) * (Math.random() < 0.5 ? -1 : 1),
+        angle: Math.random() * Math.PI * 2
+      });
+      spawnIn = stage.interval;
+    }
+
+    // 뒤에서부터 검사하면 배열에서 운석을 지워도 다음 검사가 어긋나지 않습니다.
+    for (let i = meteors.length - 1; i >= 0; i--) {
+      const meteor = meteors[i];
+      meteor.y += meteor.speed * stage.speed * dt;
+      meteor.phase += meteor.turnSpeed * stage.turn * dt;
+      // 화면 양쪽을 오가면서 두 번째 흔들림으로 경로에 변화를 줍니다.
+      const sway = 0.94 * Math.sin(meteor.phase) - 0.06 * Math.sin(meteor.phase * 3);
+      meteor.x = width / 2 + (width / 2 - meteor.radius) * sway;
+      meteor.angle += dt;
+      const hit = bullets.findIndex((bullet) => {
+        // 레이저에서 운석 중심과 가장 가까운 위치를 찾아 충돌을 검사합니다.
+        const y = Math.max(bullet.y - 8, Math.min(bullet.y + 8, meteor.y));
+        return touches({ ...bullet, y }, meteor);
+      });
+      if (hit >= 0) {
+        bullets.splice(hit, 1);
+        meteors.splice(i, 1);
+        score += meteor.points;
+        if (score > best) {
+          best = score;
+          try {
+            localStorage.setItem(bestKey, best);
+          } catch {
+            // 저장소를 쓸 수 없으면 현재 화면에만 최고점수를 유지합니다.
+          }
+        }
+      } else if (meteor.y - meteor.radius > height) {
+        meteors.splice(i, 1);
+        lives--;
+        if (lives === 0) break;
+      }
+    }
+    showStatus();
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = '#526484';
+    for (const star of stars) ctx.fillRect(star.x, star.y, 2, 2);
+
+    drawShip();
+
+    for (const bullet of bullets) {
+      ctx.fillStyle = '#28e3ff';
+      ctx.fillRect(bullet.x - 4, bullet.y - 8, 8, 16);
+      ctx.fillStyle = '#eaffff';
+      ctx.fillRect(bullet.x - 1, bullet.y - 8, 2, 16);
+    }
+    for (const meteor of meteors) drawMeteor(meteor);
+  }
+
+  function drawShip() {
+    // 우주선 중심을 기준으로 날개, 동체, 조종석을 차례로 그립니다.
+    ctx.save();
+    ctx.translate(ship.x, ship.y);
+    ctx.fillStyle = '#528df1';
+    ctx.beginPath();
+    ctx.moveTo(-5, -3);
+    ctx.lineTo(-14, 5);
+    ctx.lineTo(-14, 10);
+    ctx.lineTo(14, 10);
+    ctx.lineTo(14, 5);
+    ctx.lineTo(5, -3);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#e6f2ff';
+    ctx.beginPath();
+    ctx.ellipse(0, -2, 6, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#17658d';
+    ctx.beginPath();
+    ctx.ellipse(0, -5, 3, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#8ee8ff';
+    ctx.fillRect(-4, 10, 8, 3);
+    ctx.restore();
+  }
+
+  function drawMeteor(meteor) {
+    const { x, y, radius, angle, color, shadow } = meteor;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    // 길이가 다른 반지름의 끝점을 연결해 울퉁불퉁한 바위를 그립니다.
+    ctx.beginPath();
+    rockOutline.forEach((scale, i) => {
+      const direction = i * Math.PI * 2 / rockOutline.length;
+      ctx.lineTo(Math.cos(direction) * radius * scale,
+                 Math.sin(direction) * radius * scale);
+    });
+    ctx.closePath();
+    const shade = ctx.createLinearGradient(-radius, -radius, radius, radius);
+    shade.addColorStop(0, color);
+    shade.addColorStop(0.52, color);
+    shade.addColorStop(1, shadow);
+    ctx.fillStyle = shade;
+    ctx.fill();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    for (const [cx, cy, size] of [[-0.32, -0.26, 0.23], [0.36, 0.14, 0.17], [-0.12, 0.43, 0.13]]) {
+      ctx.beginPath();
+      ctx.ellipse(cx * radius, cy * radius, size * radius, size * radius * 0.7, 0.5, 0, Math.PI * 2);
+      ctx.fillStyle = shadow;
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function frame(time) {
+    // dt는 지난 프레임부터 흐른 초입니다. 탭을 다시 열 때 큰 이동을 막습니다.
+    const dt = Math.min((time - (previousTime ?? time)) / 1000, 0.033, challengeTime - elapsed);
+    previousTime = time;
+    update(dt);
+    draw();
+    if (lives > 0 && elapsed < challengeTime) {
+      requestAnimationFrame(frame);
+    } else {
+      finalScore.textContent = score;
+      resultText.textContent = lives > 0 ? '60초 챌린지 성공!' : '목숨을 모두 잃었습니다';
+      saveResult();
+      end.hidden = false;
+      restart.focus();
+    }
+  }
+
+  reset();
+  showRanking();
+</script>
+</html>
